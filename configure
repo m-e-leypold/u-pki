@@ -1,0 +1,81 @@
+#
+#   u-pki - configure script
+#
+#   Copyright (C) 2006,2007  M E Leypold, Software-Dienstleistungen und Beratung
+#
+#   This program is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU General Public License
+#   version 3 as published by the Free Software Foundation (no later
+#   version).
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#   General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+#   02110-1301 USA.
+#
+#   configure -- Ad-hoc configuration script
+
+
+info_message(){
+    echo "configure: $*" >&2
+}
+
+panic(){
+    echo "configure: panic: $*" >&2
+    exit 1
+}
+
+
+dump_var(){
+    # $1 varname
+    # $2 dumpname
+
+    if eval 'test -n "$'"$1"'"'; then
+       echo -n "$2"' ?= '
+       eval 'echo "$'"$1"'"'
+    fi   
+}
+
+for f in /etc/lsd/configure-override $HOME/.lsd/configure-override; do
+    if test -f "$f"; then
+       . $f
+    fi
+done
+
+while test "$#" -gt 0; do
+  case "$1" in
+    -prefix) PREFIX="$2"; shift 2;;
+      -dest) DEST="$2"; shift 2;;
+     -force) rm -f Config.mk; shift 1;;
+          *) panic "unknown options or argument: $*";;   
+  esac
+done
+
+
+if test -f Config.mk; then
+   info_message "Config.mk already exists."
+   info_message "If you want/need to reconfigure, remove Config.mk first."
+   exit 0
+fi
+
+{
+  echo '#'
+  echo '#'
+  echo '#'
+
+  dump_var DEST                DEST
+  dump_var PREFIX              prefix
+  dump_var BINDIR              bindir
+  dump_var LIBDIR              libdir
+  dump_var SHAREDIR            sharedir
+  dump_var EMACSDIR            emacsdir
+
+} > Config.mk
+
+
+
