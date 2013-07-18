@@ -3,7 +3,8 @@
 #
 #   u-pki - Utility to maintain a public key infra structure
 #
-#   Copyright (C) 2006,2007  M E Leypold, Software-Dienstleistungen und Beratung
+#   Copyright (C) 2006,2007 M E Leypold, Software-Dienstleistungen und
+#   Beratung
 #
 #   This program is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public License
@@ -46,8 +47,6 @@ USAGE='
       u-pki org <command> <arguments ...> -- Perform a client operation.
 	See '"'u-pki org help'"' for details. Common operations are: new,
 	new-ent, new-req, send, receive.
-
-  ...
 '
 
 USAGE_ca='
@@ -60,15 +59,18 @@ USAGE_ca='
 
   usage: u-pki ca <command> <arguments ...> 
 
-    Available commands are:
-      
-      prepare [<directory>] - prepares <directory> as CA, current directory, if directory is not given.
+    Available commands are: 
 
-      new-key <days> -  generates a new key for the CA in the current directory. Validity <day> days.
+      prepare [<directory>] - prepares <directory> as CA, current
+        directory, if directory is not given.
+
+      new-key <days> - generates a new key for the CA in the current
+        directory. Validity <day> days.
 
       receive [<directory>] - get certificate requests from
         <directory> (default '"'inbox'"', which usually is a symbolic
-        link to a portable media or a spooling directory of some kind).
+        link to a portable media or a spooling directory of some
+        kind).
 
       sign-all - sign all requests already received (i.e. in the
         '"'incoming'"' directory.
@@ -76,10 +78,9 @@ USAGE_ca='
       sign <requests ...> - sign specific requests.
 
       ship [<directory>] - copy all newly signed certificates to the
-        directory given (default '"'outbox'"', which usually is a
+        directory given (default is '"'outbox'"', which usually is a
         symbolic link to a portable media or a spooling directory of
-        some kind).
-'
+        some kind).  '
 
 USAGE_org='
 
@@ -90,30 +91,42 @@ USAGE_org='
   '"'u-pki org <...>'"' maintains an organization which uses
   x506-certificates.
 
-  ...
+  An organization is thought to maintain a number of
+  '"'entities'"'. Entitities are e.g. ssl enabled services or
+  individuals holding ssl private keys.
 
   usage: u-pki org <command> <arguments ...> 
 
     Available commands are:
 
       new [<directory>] - initializes a <directory> certificate
-      database for an organisation, current directory, if directory is
-      not given.
+        database for an organisation, current directory, if directory
+        is not given. After creating a new organization directory one
+        should edit Org/Org.cnf which is used as a template for
+        creating the configuration files of the entities.
 
-      new-ent <name> - creates a new entity named <name>. ...
+      new-ent <name> - creates a new entity named <name> by writing an
+        entity configuration file Ent/<name>.cnf. After creating a new
+        entity one should edit Ent/<name>.cnf which contains the
+        parameters that will be used to generate keys and certificate
+        requests.
 
-      req <entity name> - generates a certificate request for entity
-        <name>.
+      req <name> - generates a certificate request for entity
+        <name>. The key will be written to the subdirectory keys/ with
+        a name like <organization>_<name>_<timestamp>.key. The
+        request will be written to the outgoing/ directory.
 
-      send - ...
+      send [<directory>] - Copies all certificate request from the
+        outgoing/ queue to the spooling directory or medium
+        <directory> (outbox/ if not given).
 
-      receive - ...
-
-  ...
+      receive [<directory>] - Copies all certificates corressponding
+        to outstanding certificate requests from the spooling
+        directory or medium <diretory> (inbox/ if not given).
 '
 
-USAGE_example='
 
+USAGE_example='
   ...
 '
 
@@ -1260,10 +1273,20 @@ ca_sign(){
 }
 
 ca_receive(){
-    for i in inbox/*.req; do
+
+    if test "$#" -gt 0; then
+	INBOX="$1"
+	OUTBOX="$1"
+    else
+	INBOX="inbox"
+	OUTBOX="outbox"
+    fi
+    
+
+    for i in "$INBOX"/*.req; do
 	BASE="$(basename "$i" .req)"
 	if  ! test -f "incoming/$BASE.req" \
-	    && ! test -f "outbox/$BASE.crt" \
+	    && ! test -f "$OUTBOX/$BASE.crt" \
 	    && ! test -f "outgoing/$BASE.crt"
 	then
 	    cp "$i" "incoming/$BASE.req"
@@ -1274,18 +1297,29 @@ ca_receive(){
 }
 
 ca_ship(){
+  
+    if test "$#" -gt 0; then
+	INBOX="$1"
+	OUTBOX="$1"
+    else
+	INBOX="inbox"
+	OUTBOX="outbox"
+    fi
+
     for i in outgoing/*.crt; do
 	BASE="$(basename "$i" .crt)"
-	if  test -f "inbox/$BASE.req" \
-	    && ! test -f "outbox/$BASE.crt" \
+	if  test -f "$INBOX/$BASE.req" \
+	    && ! test -f "$OUTBOX/$BASE.crt" \
 	    && ! test -f "incoming/$BASE.req"
 	then
-	    cp "$i" "outbox/$BASE.crt"
+	    cp "$i" "$OUTBOX/$BASE.crt"
 	    mv "$i" shipped/"${DATE}_$BASE.crt"
 	else
 	    warning "skipping export of $BASE.crt: already exported or not yet signed."
 	fi
     done
+
+    cp "$( cd CA && realpath "$( readlink CA.crt )")" "$OUTBOX"/
 }
 
 
@@ -1303,8 +1337,8 @@ run_ca(){
         sign)             shift; check_argc 1 ... "$@"; ca_sign   "$@";;
         sign-all)         shift; check_argc 0 0 "$@"; ca_sign incoming/*.req ;;
 
-        receive|rec|get)  shift; check_argc 0 0 "$@"; ca_receive ;;
-        ship|send|push)   shift; check_argc 0 0 "$@"; ca_ship    ;;
+        receive|rec|get)  shift; check_argc 0 1 "$@"; ca_receive "$@" ;;
+        ship|send|push)   shift; check_argc 0 1 "$@"; ca_ship    "$@" ;;
        
 	help|-help|-help) echo "$USAGE_ca" | smartfmt; exit 0;;
 
@@ -1454,40 +1488,67 @@ org_genreq(){
 
 
 org_send(){
+
+    if test "$#" -gt 0; then
+	INBOX="$1"
+	OUTBOX="$1"
+    else
+	INBOX="inbox"
+	OUTBOX="outbox"
+    fi
     
     for i in outgoing/*.req; do
 	
 	BASE="$(basename "$i" .req)"
 	
 	if ! org_is_new_key "$BASE" \
-           || test -f outbox/$BASE.req \
+           || test -f "$OUTBOX/$BASE".req \
            || org_key_error_status "$BASE" ; 
 	then
 	    warning "not sending request $BASE: perhaps duplicate name: status $(org_key_status_text "$BASE")."
 	else
-	    cp "$i" outbox
+	    cp "$i" "$OUTBOX"/
 	    mv "$i" requested
 	fi
     done
-
 }
 
 
-
 org_receive(){
+
+    if test "$#" -gt 0; then
+	INBOX="$1"
+	OUTBOX="$1"
+    else
+	INBOX="inbox"
+	OUTBOX="outbox"
+    fi
     
-    for i in inbox/*.crt; do
+    for i in "$INBOX"/*.crt; do
 	
 	BASE="$(basename "$i" .crt)"
 	
-	if ! org_is_requested "$BASE" || org_key_error_status "$BASE" ; then
-	    warning "not getting cert $BASE: perhaps none of mine: status $(org_key_status_text "$BASE")."
-	else
-	    cp "$i" certs
-	    mv requested/"$BASE".req certified
-	    rm -f inbox/"$BASE".crt
-	    rm -f outbox/"$BASE".req
-	fi
+	case "$BASE" in
+	    CA_*) 
+		if test -f certs/"$BASE".crt; then
+		    warning "CA cert $BASE already in cert database: not copying."
+		else
+		    cp "$i" certs/
+		fi
+		;;
+	    *)
+		if ! org_is_requested "$BASE" \
+		    || org_key_error_status "$BASE" ; 
+		then
+		    warning "not fetching cert $BASE: perhaps none of mine: status $(org_key_status_text "$BASE")."
+		else
+		    cp "$i" certs
+		    mv requested/"$BASE".req certified
+		    rm -f "$INBOX"/"$BASE".crt
+		    rm -f "$OUTBOX"/"$BASE".req
+		fi
+		;;
+	esac
     done
 }
 
@@ -1505,10 +1566,10 @@ run_org(){
         genreq|newreq|new-req|gen-req|req)  
                         shift; check_argc 1 1 "$@"; org_genreq  "$@";;
 	send|push)
-                        shift; check_argc 0 0 "$@"; org_send    "$@";;
+                        shift; check_argc 0 1 "$@"; org_send    "$@";;
 
 	receive|rec|get)
-                        shift; check_argc 0 0 "$@"; org_receive "$@";;
+                        shift; check_argc 0 1 "$@"; org_receive "$@";;
        
 	help|-help|-help) echo "$USAGE_org" | smartfmt; exit 0;;
 

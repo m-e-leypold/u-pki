@@ -1,0 +1,67 @@
+`		-*- mode: xnotes -*-
+    
+    TODO-List for u-pki
+    ~~~~~~~~~~~~~~~~~~~
+   
+*   CA
+    --
+    
+    - (AFTER 1.0) rework ca handling to use req life cycle model (as in org)    
+    
+*   Org
+    ---
+
+    - (AFTER 1.0) org stuff: gen requests etc, dhparam. perhaps
+      openvpn shared secret.
+
+    
+*   Common/General    
+    --------------
+    
+**  Release
+    
+    - (AFTER 1.0) RPM spec and debian package definition.
+
+    
+**  Buglets/misfeatures    
+    
+    - (1.0) ship/receive should have inbox/outbox overrideable (as doc'ed ...)    
+    - (1.0) eliminate RANDFILE definition in .cnf-Files
+    - (1.0) ship/send/receive should be more verbose    
+    - (AFTER 1.0) distinguish between ERROR and UNKNOWN in org_state_text()
+    
+**  Doc
+    
+    - (AFTER 1.0) read and doc:
+      http://nils.toedtmann.net/pub/subjectAltName.txt
+      http://www.roysindre.no/a/2008/11/21/my-little-introduction-to-openssl-on-debian-creating-your-own-ca-and-managing-certificates/
+    
+**  Medium priority / later    
+    
+    - (2.0) svn support: encrypt keys where necessary (using a master
+      key for transparency of operation: LOCK.key, LOCK.enc)    
+    - (2.0) svnimport command (will gen LOCK.enc, encrypt keys:
+      foo.enk, import in stages sparing the keys)    
+    - (2.0) in presence of LOCK* keys need to be produced encrypted
+      from the get-go    
+
+**  Low priority    
+    
+    - (AFTER 1.0) list state function shows all keys, all requests etc
+      in the system with their status    
+    - (AFTER 1.0) lists box function shows the certs/requests in
+      inbox/outbox
+
+
+*   Major extensions
+    ----------------
+    
+    - (2.0 OR LATER) sudo mech um CS key zu schützen (Firmen-Szenario)
+    
+    
+*   Cross Fixing / Supporting infrastructure
+    ----------------------------------------
+    
+    - realpath @ lsdtools.shlib: should test for existing path.
+    - need a linktarget function (see ca_ship)
+    

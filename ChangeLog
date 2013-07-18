@@ -1,0 +1,15 @@
+2009-08-30  Markus E Leypold  <software-2009 AT m-e-leypold DOT de>
+
+	* Release 1.0 preparations
+	
+	* TODO: Reorganized roadmap.
+
+	* README.txt: Added Sample session. Added reference setups.
+
+	* u-pki: Added online help texts. Fixed some buglets. Added
+	  shipping of CA cert.
+
+pre 2009-08-30  Markus E Leypold  <software-2009 AT m-e-leypold DOT de>
+
+	* Developement up to version 0.1: Functional as release 0.1 with
+	  little defects, documentation still missing.

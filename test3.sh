@@ -3,6 +3,8 @@ set -e
 set -x
 set -u
 
+SPOOL=
+
 mk_ca(){
     rm -rf "$1"
     mkdir  "$1"
@@ -82,30 +84,29 @@ mk_ent(){
       grep -v ' *#' Ent/$2.cnf | grep '<<insert'  && exit 1
 
       ../u-pki org gen-req "$2" 
-      ../u-pki org send
+      ../u-pki org send $SPOOL
     )
 }
 
 
 ca_sign(){
     ( cd "$1"
-      ../u-pki ca receive 
+      ../u-pki ca receive $SPOOL 
       yes | ../u-pki ca sign-all
-      ../u-pki ca ship
+      ../u-pki ca ship $SPOOL
     )
 }
 
 
-
 org_receive(){
     ( cd "$1"
-      ../u-pki org receive 
+      ../u-pki org receive $SPOOL
     )   
 }
 
 
-rm -rf SHIPDIR
-mkdir SHIPDIR
+rm -rf SHIPDIR SHIPDIR2
+mkdir SHIPDIR SHIPDIR2
 
 mk_ca  ca1
 mk_org org1
@@ -122,6 +123,16 @@ org_receive org1
 org_receive org2
 
 # XXX check post conds
+
+SPOOL=../SHIPDIR2
+
+mk_ent org1 imap
+mk_ent org2 pop3
+
+ca_sign ca1
+
+org_receive org1
+org_receive org2
 
 exit 0
 

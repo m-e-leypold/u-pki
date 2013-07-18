@@ -13,7 +13,7 @@ cleaner: clean
 	rm Config.mk
 
 clean:
-	rm -rf ca2 ca1 org1 org2 SHIPDIR
+	rm -rf ca2 ca1 org1 org2 SHIPDIR*
 
 install:
 	install -m 755 u-pki $(BINDIR)
